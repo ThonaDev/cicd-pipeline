@@ -3,16 +3,10 @@ pipeline {
     agent any
 
     environment {
-        IMAGE_NAME = 'react-app'
+        IMAGE_NAME = 'thonadev/react-app'
     }
 
     stages {
-
-        stage('Checkout') {
-            steps {
-                checkout scm
-            }
-        }
 
         stage('Build Docker Image') {
             steps {
@@ -27,6 +21,27 @@ pipeline {
         stage('Verify Docker Image') {
             steps {
                 sh 'docker images ${IMAGE_NAME}'
+            }
+        }
+
+        stage('Push to Docker Hub') {
+            steps {
+                withCredentials([usernamePassword(
+                    credentialsId: 'dockerhub-credentials',
+                    usernameVariable: 'DOCKERHUB_USER',
+                    passwordVariable: 'DOCKERHUB_TOKEN'
+                )]) {
+                    sh '''
+                        echo "$DOCKERHUB_TOKEN" | docker login \
+                            -u "$DOCKERHUB_USER" \
+                            --password-stdin
+
+                        docker push ${IMAGE_NAME}:${BUILD_NUMBER}
+                        docker push ${IMAGE_NAME}:latest
+
+                        docker logout
+                    '''
+                }
             }
         }
     }
